@@ -1,25 +1,38 @@
-//
-//  ViewController.swift
-//  OverlayProject
-//
-//  Created by Saltuk Bugra OZELGUL on 7.05.2023.
-//
-
 import UIKit
 import SwiftUI
 import AVFoundation
 
-class ViewController : UIViewController {
+class ViewController : UIViewController,AVCaptureFileOutputRecordingDelegate {
     
- private var  permissionGranted = false
- private let captureSession = AVCaptureSession()
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+        print("Finished recording to \(outputFileURL.absoluteString)")
+        recordButton.setTitle("Record", for: .normal)
+    }
+    
+    private var  permissionGranted = false
+    private let captureSession = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
     
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var screenRect: CGRect! = nil
+    var movieOutput = AVCaptureMovieFileOutput()
+    let recordButton = UIButton(type: .system)
     
     override func  viewDidLoad() {
         checkPermission()
+        
+        
+        // Record Button
+        recordButton.setTitle("Record", for: .normal)
+        recordButton.addTarget(self, action: #selector(toggleRecording), for: .touchUpInside)
+        recordButton.translatesAutoresizingMaskIntoConstraints = false
+        recordButton.layer.zPosition = 1000
+        view.addSubview(recordButton)
+        NSLayoutConstraint.activate([
+            recordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            recordButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        ])
+
         
         sessionQueue.async { [unowned self] in
             guard permissionGranted else {return}
@@ -27,7 +40,7 @@ class ViewController : UIViewController {
             self.captureSession.startRunning()
         }
     }
-    
+
     override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
         screenRect = UIScreen.main.bounds
         self.previewLayer.frame = CGRect(x: 0, y: 0, width: screenRect.size.width, height: screenRect.size.height)
@@ -76,6 +89,18 @@ class ViewController : UIViewController {
         
     }
     
+    @objc func toggleRecording() {
+        if movieOutput.isRecording {
+            movieOutput.stopRecording()
+        } else {
+            let outputPath = NSTemporaryDirectory() + "output.mov"
+            let outputFileURL = URL(fileURLWithPath: outputPath)
+            recordButton.setTitle("Recording...", for: .normal)
+            movieOutput.startRecording(to: outputFileURL, recordingDelegate: self)
+        }
+    }
+
+    
     func setupCaptureSession() {
         // Access camera
         guard let videoDevice = AVCaptureDevice.default(.builtInDualWideCamera,for: .video, position: .back) else { return }
@@ -90,23 +115,35 @@ class ViewController : UIViewController {
         previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill // Fill screen
         previewLayer.connection?.videoOrientation = .portrait
         
-        // Create and add text layer to the overlay layer
-        let overlayLayer = CALayer()
-        overlayLayer.frame = previewLayer.frame
-        overlayLayer.masksToBounds = true
-            let textLayer = CATextLayer()
-            textLayer.string = "Top Left"
-            textLayer.fontSize = 24
-            textLayer.foregroundColor = UIColor.white.cgColor
-            textLayer.frame = CGRect(x: 10, y: 10, width: 100, height: 30)
-        overlayLayer.addSublayer(textLayer)
+        // Add new layer which have OverlayView content
+//        let overlayLayer = CALayer()
+//        overlayLayer.frame = previewLayer.frame
+//        let textLayer = CATextLayer()
+//        textLayer.string = "Top Left Text"
+//        textLayer.font = UIFont.systemFont(ofSize: 20)
+//        textLayer.fontSize = 20
+//        textLayer.alignmentMode = .left
+//        textLayer.foregroundColor = UIColor.white.cgColor
+//        textLayer.frame = CGRect(x: 150, y: 150, width: 200, height: 30)
+//        overlayLayer.addSublayer(textLayer)
         
-        // Add the overlay layer to the preview layer's superlayer
-        previewLayer.superlayer?.addSublayer(overlayLayer)
+        // Add movie output
+        if captureSession.canAddOutput(movieOutput) {
+            captureSession.addOutput(movieOutput)
+            if let connection = movieOutput.connection(with: .video) {
+                if connection.isVideoStabilizationSupported {
+                    connection.preferredVideoStabilizationMode = .auto
+                }
+                if connection.isVideoOrientationSupported {
+                    connection.videoOrientation = .portrait
+                }
+            }
+        }
         
         // Updates to UI must be on main queue
         DispatchQueue.main.async { [weak self] in
-            self!.view.layer.addSublayer(self!.previewLayer)
+            self?.view.layer.addSublayer(self!.previewLayer)
+//            self?.view.layer.addSublayer(overlayLayer)
         }
     }
 
