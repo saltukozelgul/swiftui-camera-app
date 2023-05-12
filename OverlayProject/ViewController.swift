@@ -2,26 +2,28 @@ import UIKit
 import SwiftUI
 import AVFoundation
 
-class ViewController : UIViewController,AVCaptureFileOutputRecordingDelegate {
-    
-    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-        print("Finished recording to \(outputFileURL.absoluteString)")
-        recordButton.setTitle("Record", for: .normal)
-    }
-    
-    private var  permissionGranted = false
+class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDelegate {
+    private var permissionGranted = false
     private let captureSession = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
     
     private var previewLayer = AVCaptureVideoPreviewLayer()
+    var videoDataOutput: AVCaptureVideoDataOutput!
+    var videoDataOutputQueue: DispatchQueue!
+    var assetWriter: AVAssetWriter!
+    var assetWriterInput: AVAssetWriterInput!
+    var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor!
+    let movieFileOutput = AVCaptureMovieFileOutput()
+    var isRecording = false
+    
+    
+    
     var screenRect: CGRect! = nil
-    var movieOutput = AVCaptureMovieFileOutput()
     let recordButton = UIButton(type: .system)
     
     override func  viewDidLoad() {
         checkPermission()
-        
-        
+            
         // Record Button
         recordButton.setTitle("Record", for: .normal)
         recordButton.addTarget(self, action: #selector(toggleRecording), for: .touchUpInside)
@@ -80,6 +82,7 @@ class ViewController : UIViewController,AVCaptureFileOutputRecordingDelegate {
         }
     }
     
+    
     func requestPermission() {
         sessionQueue.suspend()
           AVCaptureDevice.requestAccess(for: .video) { [unowned self] granted in
@@ -90,16 +93,14 @@ class ViewController : UIViewController,AVCaptureFileOutputRecordingDelegate {
     }
     
     @objc func toggleRecording() {
-        if movieOutput.isRecording {
-            movieOutput.stopRecording()
-        } else {
-            let outputPath = NSTemporaryDirectory() + "output.mov"
-            let outputFileURL = URL(fileURLWithPath: outputPath)
-            recordButton.setTitle("Recording...", for: .normal)
-            movieOutput.startRecording(to: outputFileURL, recordingDelegate: self)
-        }
+
     }
 
+    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutput sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
+        // Do something with the video frame.
+        print("Frame captured")
+        
+    }
     
     func setupCaptureSession() {
         // Access camera
@@ -115,35 +116,20 @@ class ViewController : UIViewController,AVCaptureFileOutputRecordingDelegate {
         previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill // Fill screen
         previewLayer.connection?.videoOrientation = .portrait
         
-        // Add new layer which have OverlayView content
-//        let overlayLayer = CALayer()
-//        overlayLayer.frame = previewLayer.frame
-//        let textLayer = CATextLayer()
-//        textLayer.string = "Top Left Text"
-//        textLayer.font = UIFont.systemFont(ofSize: 20)
-//        textLayer.fontSize = 20
-//        textLayer.alignmentMode = .left
-//        textLayer.foregroundColor = UIColor.white.cgColor
-//        textLayer.frame = CGRect(x: 150, y: 150, width: 200, height: 30)
-//        overlayLayer.addSublayer(textLayer)
-        
-        // Add movie output
-        if captureSession.canAddOutput(movieOutput) {
-            captureSession.addOutput(movieOutput)
-            if let connection = movieOutput.connection(with: .video) {
-                if connection.isVideoStabilizationSupported {
-                    connection.preferredVideoStabilizationMode = .auto
-                }
-                if connection.isVideoOrientationSupported {
-                    connection.videoOrientation = .portrait
-                }
-            }
-        }
+        //Video data output
+        let videoDataOutput = AVCaptureVideoDataOutput()
+        // Set the sample buffer delegate of the AVCaptureVideoDataOutput object to your view controller.
+        videoDataOutput.setSampleBufferDelegate(self, queue: DispatchQueue.main)
+
+        // Configure the AVCaptureVideoDataOutput object.
+        videoDataOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+
+        // Add the AVCaptureVideoDataOutput object to the AVCaptureSession object.
+        captureSession.addOutput(videoDataOutput)
         
         // Updates to UI must be on main queue
         DispatchQueue.main.async { [weak self] in
             self?.view.layer.addSublayer(self!.previewLayer)
-//            self?.view.layer.addSublayer(overlayLayer)
         }
     }
 
