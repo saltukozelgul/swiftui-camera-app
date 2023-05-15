@@ -67,7 +67,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             default:
                 break
         }
-        
     }
     
     
