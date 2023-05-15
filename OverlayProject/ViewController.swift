@@ -12,7 +12,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
 
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var videoDataOutput: AVCaptureVideoDataOutput!
-    var videoDataOutputQueue: DispatchQueue!
     var assetWriter: AVAssetWriter!
     var assetWriterInput: AVAssetWriterInput!
     var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor!
@@ -20,20 +19,11 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     var wasFirstBuffer = false
     var videoOutputURL: URL!
     
-    // create editedBuffers array type CGSampleBuffer which have 1500 frame size
-    var editedBuffers = [CMSampleBuffer]()
-    
     var screenRect: CGRect! = nil
-    let recordButton = UIButton(type: .system)
+    let recordButton = UIButton(type: .contactAdd)
     
     override func  viewDidLoad() {
         checkPermission()
-        isRecording = false
-
-        // clear editedBuffers
-        editedBuffers.removeAll()
-        
-            
         // Record Button
         recordButton.setTitle("Record", for: .normal)
         recordButton.addTarget(self, action: #selector(toggleRecording), for: .touchUpInside)
@@ -45,7 +35,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             recordButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
         ])
 
-        
         sessionQueue.async { [unowned self] in
             guard permissionGranted else {return}
             self.setupCaptureSession()
@@ -77,19 +66,19 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
                         
             default:
                 break
-        }    }
+        }
+        
+    }
     
     
     func checkPermission() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
-            
             case .authorized:
                 permissionGranted = true
             case .notDetermined:
                     requestPermission()
             default:
             permissionGranted = false
-            
         }
     }
     
@@ -151,14 +140,12 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: assetWriterInput, sourcePixelBufferAttributes: sourcePixelBufferAttributesDictionary)
         
         assetWriter.startWriting()
-        print("AssetWriter init")
+        print("AssetWriter initiliazed")
         print(videoOutputURL)
         
     }
     
     func finishAssetWriter() {
-
-        
         // Finish writing session
         assetWriterInput.markAsFinished()
         assetWriter.finishWriting {
@@ -173,31 +160,26 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     }
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        // Do something with the video frame.-
-        // Add the sample buffer to the global array.
+        // Adding the buffers to assetWriter session for creating video.
         if isRecording {
             if wasFirstBuffer == false {
                 assetWriter.startSession(atSourceTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
                 wasFirstBuffer = true
             }
             
-            // Edit buffer and add text to it
+            //
             // TODO - EDIT THIS BUFFER BY USING BITMAX PAINTING OR OPENGL
+            //
             
             
+            // Add buffer to assetWriter' session
             pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
         }
-        print(sampleBuffer)
-        
+       
+        // print(sampleBuffer)
     
     }
 
-    
-    func addBufferToListAsync (buffer: CMSampleBuffer) {
-        editedBuffers.append(buffer)
-    }
-    
-    
     
     func setupCaptureSession() {
         // Access camera
