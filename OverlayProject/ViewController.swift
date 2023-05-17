@@ -128,6 +128,8 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         ] as [String : Any]
         assetWriterInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoSettings)
         assetWriterInput.expectsMediaDataInRealTime = true
+        // set video orientation
+        assetWriterInput.transform = CGAffineTransform(rotationAngle: CGFloat.pi / 2)
         assetWriter.add(assetWriterInput)
         
         // Create pixel buffer adaptor
@@ -157,6 +159,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         }
         
     }
+    
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         // Adding the buffers to assetWriter session for creating video.
@@ -170,9 +173,64 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             // TODO - EDIT THIS BUFFER BY USING BITMAX PAINTING OR OPENGL
             //
             
+            // Edit this buffer and text
+            let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
+            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+            let context = CIContext()
+            
+            // add top left corner text
+            let text = "Scoreboard"
+            let textRect = CGRect(x: 15, y: 15, width: 215, height: 215)
+        
+            let textAttributes = [
+                NSAttributedString.Key.foregroundColor: UIColor.orange,
+                NSAttributedString.Key.font: UIFont(name: "Helvetica Bold", size: 35)!
+            ]
+             let textImage = UIGraphicsImageRenderer(size: textRect.size).image { _ in
+                 text.draw(in: textRect, withAttributes: textAttributes)
+             }
+             var textCiImage = CIImage(image: textImage)!
+            // Rotate this image
+            textCiImage = textCiImage.oriented(.left)
+             // add text to the image
+             let textCiImageWithBackground = textCiImage.composited(over: ciImage)
+             // add image to the buffer
+             context.render(textCiImageWithBackground, to: pixelBuffer)
+            
+            // add top left corner text
+            let score = "0-0"
+            let scoreRect = CGRect(x: 80, y: 45, width: 215, height: 215)
+            let scoreAttributes = [
+                NSAttributedString.Key.foregroundColor: UIColor.orange,
+                NSAttributedString.Key.font: UIFont(name: "Helvetica Bold", size: 35)!
+            ]
+             let scoreImage = UIGraphicsImageRenderer(size: scoreRect.size).image { _ in
+                 score.draw(in: scoreRect, withAttributes: scoreAttributes)
+             }
+             var scoreCiImage = CIImage(image: scoreImage)!
+            // Rotate this image
+            scoreCiImage = scoreCiImage.oriented(.left)
+             // add text to the image
+             let scoreCiImageWithBackground = scoreCiImage.composited(over: ciImage)
+             // add image to the buffer
+             context.render(scoreCiImageWithBackground, to: pixelBuffer)
+ 
+            //Conver to buffer again to add pixelBufferAdaptor
+            var timingInfo = CMSampleTimingInfo()
+            timingInfo.presentationTimeStamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            timingInfo.duration = CMSampleBufferGetDuration(sampleBuffer)
+            var videoInfo: CMVideoFormatDescription?
+            CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &videoInfo)
+            var sampleBuffer: CMSampleBuffer?
+            CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: videoInfo!, sampleTiming: &timingInfo, sampleBufferOut: &sampleBuffer)
+            
+            //
+            // TODO - END
+            //
+            
             
             // Add buffer to assetWriter' session
-            pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
+            pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer!)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer!))
         }
        
         // print(sampleBuffer)
@@ -196,12 +254,13 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         
         //Video data output
         let videoDataOutput = AVCaptureVideoDataOutput()
+        
         // Set the sample buffer delegate of the AVCaptureVideoDataOutput object to your view controller.
         videoDataOutput.setSampleBufferDelegate(self, queue: DispatchQueue.main)
 
         // Configure the AVCaptureVideoDataOutput object.
         videoDataOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-
+        
         // Add the AVCaptureVideoDataOutput object to the AVCaptureSession object.
         captureSession.addOutput(videoDataOutput)
         
@@ -211,6 +270,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         }
     }
 
+    
 }
 
 struct HostedViewController: UIViewControllerRepresentable {
