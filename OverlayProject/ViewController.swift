@@ -39,6 +39,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             guard permissionGranted else {return}
             self.setupCaptureSession()
             self.setupAssetWriter()
+            print("Merhabaa")
             self.captureSession.startRunning()
         }
     }
@@ -104,16 +105,13 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     func setupAssetWriter() {
         // Create asset writer
         let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
-        // Create videoOutputURL type Url and if its already exits remove first
-        let videoOutputURL = URL(fileURLWithPath: documentsPath).appendingPathComponent("output.mov")
-        
-        // Remove file if already exits
-        do {
-            try FileManager.default.removeItem(at: videoOutputURL)
-        } catch {
-            print(error)
-        }
-        
+        // add currentdate to video URl as well
+        let currentDate = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ss"
+        let convertedDate = dateFormatter.string(from: currentDate)
+        let videoOutputURL = URL(fileURLWithPath: documentsPath).appendingPathComponent("output_\(convertedDate).mov")
+                
         do {
             assetWriter = try AVAssetWriter(outputURL: videoOutputURL, fileType: AVFileType.mov)
         } catch {
@@ -151,13 +149,22 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         assetWriterInput.markAsFinished()
         assetWriter.finishWriting {
             print("Finished writing")
+            UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
+            print("Saved to library video name: \(self.assetWriter.outputURL.path)")
+            
+            self.restartAssetWriter()
         }
         
         // Save the video to the photo library on main thread
-        DispatchQueue.main.async { [self] in
-            UISaveVideoAtPathToSavedPhotosAlbum(assetWriter.outputURL.path, nil, nil, nil)
-        }
+
+
         
+    }
+    
+    func restartAssetWriter() {
+        // Restart writing session
+        setupAssetWriter()
+        wasFirstBuffer = false
     }
     
 
