@@ -3,12 +3,18 @@ import SwiftUI
 import OpenGLES.ES2
 import AVFoundation
 import Photos
+import HaishinKit
 
 
 class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDelegate {
     private var permissionGranted = false
     private let captureSession = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
+    
+    let audioSession = AVAudioSession.sharedInstance()
+    var rtmpConnection = RTMPConnection()
+    var rtmpStream: RTMPStream!
+    
 
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var videoDataOutput: AVCaptureVideoDataOutput!
@@ -52,6 +58,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             guard permissionGranted else {return}
             self.setupCaptureSession()
             self.setupAssetWriter()
+            self.setupRTMPSession()
             print("Merhabaa")
             self.captureSession.startRunning()
         }
@@ -95,6 +102,19 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         }
     }
     
+    func setupRTMPSession() {
+        rtmpStream = RTMPStream(connection: rtmpConnection)
+        rtmpStream.frameRate = 30
+        
+//        let hkView = HKView(frame: view.bounds)
+//        hkView.videoGravity = AVLayerVideoGravity.resizeAspectFill
+//        hkView.attachStream(rtmpStream)
+//        DispatchQueue.main.async { [weak self] in
+//            self?.view.addSubview(hkView)
+//        }
+        rtmpConnection.connect("rtmp://192.168.0.14/live")
+        rtmpStream.publish("testStream")
+    }
     
     func requestPermission() {
         sessionQueue.suspend()
@@ -251,7 +271,12 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             
             // Add buffer to assetWriter' session
             pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer!)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer!))
+            
+            rtmpStream.appendSampleBuffer(sampleBuffer!)
             frameCount += 1
+        }
+        else {
+            rtmpStream.appendSampleBuffer(sampleBuffer)
         }
     }
 
