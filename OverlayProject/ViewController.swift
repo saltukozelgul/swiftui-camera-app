@@ -17,10 +17,12 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor!
     var isRecording = false
     var wasFirstBuffer = false
+    var frameCount = 0
     var videoOutputURL: URL!
     
     var screenRect: CGRect! = nil
     let recordButton = UIButton(type: .contactAdd)
+    let testButton = UIButton(type: .system)
     
     override func  viewDidLoad() {
         checkPermission()
@@ -34,6 +36,17 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             recordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             recordButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
         ])
+        
+        testButton.setTitle("Test", for: .normal)
+        testButton.addTarget(self, action: #selector(totalTimeOfBuffers), for: .touchUpInside)
+        testButton.translatesAutoresizingMaskIntoConstraints = false
+        testButton.layer.zPosition = 1000
+        view.addSubview(testButton)
+        NSLayoutConstraint.activate([
+            testButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            testButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -50)
+        ])
+        
 
         sessionQueue.async { [unowned self] in
             guard permissionGranted else {return}
@@ -144,20 +157,24 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         
     }
     
+    @objc func totalTimeOfBuffers() -> Int   {
+        // Frame count is the total number of buffers and fps is 29 so calculate video duration
+        // convert to nearest int
+        let duration = Double(frameCount) / 29
+        print(round(duration))
+        return Int(round(duration))
+    }
+    
     func finishAssetWriter() {
         // Finish writing session
         assetWriterInput.markAsFinished()
         assetWriter.finishWriting {
-            print("Finished writing")
+            print("Total number of frames: \(self.frameCount)")
             UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
             print("Saved to library video name: \(self.assetWriter.outputURL.path)")
             
             self.restartAssetWriter()
         }
-        
-        // Save the video to the photo library on main thread
-
-
         
     }
     
@@ -165,6 +182,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         // Restart writing session
         setupAssetWriter()
         wasFirstBuffer = false
+        frameCount = 0
     }
     
 
@@ -177,7 +195,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             }
             
             //
-            // TODO - EDIT THIS BUFFER BY USING BITMAX PAINTING OR OPENGL
+            // EDIT THIS BUFFER
             //
             
             // Edit this buffer and text
@@ -231,17 +249,10 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             var sampleBuffer: CMSampleBuffer?
             CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: videoInfo!, sampleTiming: &timingInfo, sampleBufferOut: &sampleBuffer)
             
-            //
-            // TODO - END
-            //
-            
-            
             // Add buffer to assetWriter' session
             pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer!)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer!))
+            frameCount += 1
         }
-       
-        // print(sampleBuffer)
-    
     }
 
     
