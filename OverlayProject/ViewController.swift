@@ -30,7 +30,29 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     let recordButton = UIButton(type: .contactAdd)
     let testButton = UIButton(type: .system)
     
+    
+    // When app minimized
+    @objc func appMovedToBackground() {
+        print("App moved to background!")
+        if isRecording {
+            toggleRecording()
+        }
+    }
+    
+    @objc func appMovedToForeground() {
+        print("App moved to foreground!")
+        restartAssetWriter()
+    }
+    
+    
     override func  viewDidLoad() {
+        NotificationCenter.default.addObserver(self, selector: #selector(self.appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
+        
+        // App enter foregrond
+        NotificationCenter.default.addObserver(self, selector: #selector(self.appMovedToForeground), name: UIApplication.didBecomeActiveNotification, object: nil)
+        
+        
+        
         checkPermission()
         // Record Button
         recordButton.setTitle("Record", for: .normal)
@@ -43,7 +65,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             recordButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
         ])
         
-        testButton.setTitle("Test", for: .normal)
+        testButton.setTitle("Test Button", for: .normal)
         testButton.addTarget(self, action: #selector(totalTimeOfBuffers), for: .touchUpInside)
         testButton.translatesAutoresizingMaskIntoConstraints = false
         testButton.layer.zPosition = 1000
@@ -59,7 +81,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             self.setupCaptureSession()
             self.setupAssetWriter()
             self.setupRTMPSession()
-            print("Merhabaa")
             self.captureSession.startRunning()
         }
     }
@@ -141,7 +162,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         // add currentdate to video URl as well
         let currentDate = Date()
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ss"
+        dateFormatter.dateFormat = "dd-MM-yyyy HH:mm:ss:SSS"
         let convertedDate = dateFormatter.string(from: currentDate)
         let videoOutputURL = URL(fileURLWithPath: documentsPath).appendingPathComponent("output_\(convertedDate).mov")
                 
@@ -190,7 +211,12 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         assetWriterInput.markAsFinished()
         assetWriter.finishWriting {
             print("Total number of frames: \(self.frameCount)")
-            UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
+            
+            // Main queue
+            DispatchQueue.main.async {
+                UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
+            }
+            
             print("Saved to library video name: \(self.assetWriter.outputURL.path)")
             
             self.restartAssetWriter()
@@ -207,6 +233,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     
 
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        
         // Adding the buffers to assetWriter session for creating video.
         if isRecording {
             if wasFirstBuffer == false {
@@ -322,6 +349,6 @@ struct HostedViewController: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        print("updated")
+      
     }
 }
