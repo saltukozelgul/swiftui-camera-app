@@ -11,7 +11,6 @@ struct ContentView: View {
     var body: some View {
             HostedViewController()
                 .ignoresSafeArea()
-                .overlay(OverlayView())
     }
 }
 

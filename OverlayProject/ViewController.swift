@@ -10,6 +10,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     private var permissionGranted = false
     private let captureSession = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
+    private let readerQueue = DispatchQueue(label: "readerQueue")
     
     let audioSession = AVAudioSession.sharedInstance()
     var rtmpConnection = RTMPConnection()
@@ -133,8 +134,8 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
 //        DispatchQueue.main.async { [weak self] in
 //            self?.view.addSubview(hkView)
 //        }
-        rtmpConnection.connect("rtmp://192.168.0.14/live")
-        rtmpStream.publish("testStream")
+        rtmpConnection.connect("rtmp://192.168.1.13/live")
+        rtmpStream.publish("stream")
     }
     
     func requestPermission() {
@@ -258,6 +259,8 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             // get max value of X
             // we change the orientation so we have to fetch Y for X
             let max = ciImage.extent.maxY
+            let max2 = ciImage.extent.maxX
+            
             let imageRect = CGRect(x:50 , y: max - imageHeight! - 50, width: imageWidth!, height: imageHeight!)
             var ciScoreboardImage = CIImage(image: image!)!
             ciScoreboardImage = ciScoreboardImage.oriented(.upMirrored)
@@ -265,7 +268,81 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             let cgImageWithBackground = ciScoreboardImage.composited(over: ciImage)
             context.render(cgImageWithBackground, to: pixelBuffer)
             
-            //Conver to buffer again to add pixelBufferAdaptor
+            // TAKIM 1
+            
+            let teamOne = "Takım - 1"
+            // create textRect for right top corner
+            let textRect = CGRect(x: 50, y: 50, width: 500, height: max/2 + 25)
+            let textAttributes = [
+                NSAttributedString.Key.foregroundColor: UIColor.black,
+                NSAttributedString.Key.font: UIFont(name: "Helvetica Bold", size: 25)!
+            ]
+            let textImage = UIGraphicsImageRenderer(size: textRect.size).image { _ in
+                 teamOne.draw(in: textRect, withAttributes: textAttributes)
+            }
+            var textCiImage = CIImage(image: textImage)!
+            textCiImage = textCiImage.oriented(.up)
+            let textCiImageWithBackground = textCiImage.composited(over: ciImage)
+            context.render(textCiImageWithBackground, to: pixelBuffer)
+            
+            // SKOR
+            
+            let score = "0 - 0"
+            let scoreRect = CGRect(x: 230, y: 50, width: 500, height: max/2 + 25)
+            let scoreAttributes = [
+                NSAttributedString.Key.foregroundColor: UIColor.white,
+                NSAttributedString.Key.font: UIFont(name: "Helvetica Bold", size: 25)!
+            ]
+             let scoreImage = UIGraphicsImageRenderer(size: scoreRect.size).image { _ in
+                 score.draw(in: scoreRect, withAttributes: scoreAttributes)
+             }
+             var scoreCiImage = CIImage(image: scoreImage)!
+            // Rotate this image
+            scoreCiImage = scoreCiImage.oriented(.up)
+             // add text to the image
+             let scoreCiImageWithBackground = scoreCiImage.composited(over: ciImage)
+             // add image to the buffer
+             context.render(scoreCiImageWithBackground, to: pixelBuffer)
+            
+            // TAKIM - 2
+            
+            let teamTwo = "Takım - 2"
+            let textRect2 = CGRect(x: 320, y: 50, width: 500, height: max/2 + 25)
+            let textImage2 = UIGraphicsImageRenderer(size: textRect2.size).image { _ in
+                 teamTwo.draw(in: textRect2, withAttributes: textAttributes)
+            }
+            var textCiImage2 = CIImage(image: textImage2)!
+            textCiImage2 = textCiImage2.oriented(.up)
+            let textCiImageWithBackground2 = textCiImage2.composited(over: ciImage)
+            context.render(textCiImageWithBackground2, to: pixelBuffer)
+            
+
+     
+
+      
+            let duration = totalTimeOfBuffers()
+
+            // Convert this MM:SS format
+            let minutes = duration / 60
+            let seconds = duration % 60
+            let time = String(format: "%02d:%02d", minutes, seconds)
+
+
+            let timeRect = CGRect(x: 225, y: 50, width: 500, height: max/2 - 5 )
+            let timeAttributes = [
+                NSAttributedString.Key.foregroundColor: UIColor.black,
+                NSAttributedString.Key.font: UIFont(name: "Helvetica Bold", size: 25)!
+            ]
+            let timeImage = UIGraphicsImageRenderer(size: timeRect.size).image { _ in
+                 time.draw(in: timeRect, withAttributes: timeAttributes)
+             }
+            var timeCiImage = CIImage(image: timeImage)!
+            timeCiImage = timeCiImage.oriented(.up)
+            let timeCiImageWithBackground = timeCiImage.composited(over: ciImage)
+            context.render(timeCiImageWithBackground, to: pixelBuffer)
+            
+            
+            //Convert to buffer again to add pixelBufferAdaptor
             var timingInfo = CMSampleTimingInfo()
             timingInfo.presentationTimeStamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             timingInfo.duration = CMSampleBufferGetDuration(sampleBuffer)
