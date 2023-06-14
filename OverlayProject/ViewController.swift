@@ -89,7 +89,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             guard permissionGranted else {return}
             self.setupCaptureSession()
             self.setupAssetWriter()
-            self.setupRTMPSession()
+            self.setupWebRTC()
             self.captureSession.startRunning()
         }
     }
@@ -143,7 +143,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     }
     
     private func createVideoTrack() -> RTCVideoTrack {
-    let videoTrack = RTCClient.factory.videoTrack(with: self.videoSource, trackId: "video0")
+    let videoTrack = WebRTCClient.factory.videoTrack(with: self.videoSource, trackId: "video0")
         return videoTrack
     }
     
