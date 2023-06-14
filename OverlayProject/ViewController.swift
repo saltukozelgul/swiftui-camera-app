@@ -4,7 +4,7 @@ import OpenGLES.ES2
 import AVFoundation
 import Photos
 import HaishinKit
-
+import WebRTC
 
 class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDelegate {
     private var permissionGranted = false
@@ -12,10 +12,18 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
     private let readerQueue = DispatchQueue(label: "readerQueue")
     
-    let audioSession = AVAudioSession.sharedInstance()
-    var rtmpConnection = RTMPConnection()
-    var rtmpStream: RTMPStream!
-    
+    // WebRTC instances
+    private var videoCapturer: RTCVideoCapturer?
+    private var localVideoSource = WebRTCClient.factory.videoSource()
+    private var localVideoTrack: RTCVideoTrack?
+    private var remoteVideoTrack: RTCVideoTrack?
+    private var  peerConnection: RTCPeerConnection? = nil
+    public static let factory: RTCPeerConnectionFactory = {
+        RTCInitializeSSL()
+        let videoEncoderFactory = RTCDefaultVideoEncoderFactory()
+        let videoDecoderFactory = RTCDefaultVideoDecoderFactory()
+        return RTCPeerConnectionFactory(encoderFactory: videoEncoderFactory, decoderFactory: videoDecoderFactory)
+    }()
 
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var videoDataOutput: AVCaptureVideoDataOutput!
@@ -124,18 +132,19 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         }
     }
     
-    func setupRTMPSession() {
-        rtmpStream = RTMPStream(connection: rtmpConnection)
-        rtmpStream.frameRate = 30
+    func setupWebRTC() {
+        let streamId = "stream"
         
-//        let hkView = HKView(frame: view.bounds)
-//        hkView.videoGravity = AVLayerVideoGravity.resizeAspectFill
-//        hkView.attachStream(rtmpStream)
-//        DispatchQueue.main.async { [weak self] in
-//            self?.view.addSubview(hkView)
-//        }
-        rtmpConnection.connect("rtmp://192.168.1.13/live")
-        rtmpStream.publish("stream")
+        let videoTrack = self.createVideoTrack()
+        self.localVideoTrack = videoTrack
+        self.peerConnection!.add(videoTrack, streamIds: [streamId])
+        self.remoteVideoTrack = self.peerConnection!.transceivers.first { $0.mediaType == .video }?.receiver.track as? RTCVideoTrack
+        
+    }
+    
+    private func createVideoTrack() -> RTCVideoTrack {
+    let videoTrack = RTCClient.factory.videoTrack(with: self.videoSource, trackId: "video0")
+        return videoTrack
     }
     
     func requestPermission() {
@@ -354,11 +363,15 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             // Add buffer to assetWriter' session
             pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer!)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer!))
             
-            rtmpStream.appendSampleBuffer(sampleBuffer!)
+            let rtcPixelBuffer = RTCCVPixelBuffer(pixelBuffer: CMSampleBufferGetImageBuffer(sampleBuffer!)!)
+            let timeStampNs: Int64 = Int64(CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer!)) * 1000000000)
+            let rtcVideoFrame = RTCVideoFrame(buffer: rtcPixelBuffer, rotation: ._90, timeStampNs: timeStampNs)
+            
+            self.localVideoSource.capturer(videoCapturer!, didCapture: rtcVideoFrame)
             frameCount += 1
         }
         else {
-            rtmpStream.appendSampleBuffer(sampleBuffer)
+            // Not recoring state
         }
     }
 
