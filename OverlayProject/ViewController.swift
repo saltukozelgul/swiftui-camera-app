@@ -14,7 +14,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     
     // WebRTC instances
     private var videoCapturer: RTCVideoCapturer?
-    private var localVideoSource = WebRTCClient.factory.videoSource()
     private var localVideoTrack: RTCVideoTrack?
     private var remoteVideoTrack: RTCVideoTrack?
     private var  peerConnection: RTCPeerConnection? = nil
@@ -24,6 +23,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         let videoDecoderFactory = RTCDefaultVideoDecoderFactory()
         return RTCPeerConnectionFactory(encoderFactory: videoEncoderFactory, decoderFactory: videoDecoderFactory)
     }()
+    private var localVideoSource = factory.videoSource()
 
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var videoDataOutput: AVCaptureVideoDataOutput!
@@ -142,8 +142,8 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         
     }
     
-    private func createVideoTrack() -> RTCVideoTrack {
-    let videoTrack = WebRTCClient.factory.videoTrack(with: self.videoSource, trackId: "video0")
+    func createVideoTrack() -> RTCVideoTrack {
+        let videoTrack = ViewController.factory.videoTrack(with: self.localVideoSource, trackId: "video0")
         return videoTrack
     }
     
