@@ -10,20 +10,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     private var permissionGranted = false
     private let captureSession = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "sessionQueue")
-    private let readerQueue = DispatchQueue(label: "readerQueue")
-    
-    // WebRTC instances
-    private var videoCapturer: RTCVideoCapturer?
-    private var localVideoTrack: RTCVideoTrack?
-    private var remoteVideoTrack: RTCVideoTrack?
-    private var  peerConnection: RTCPeerConnection? = nil
-    public static let factory: RTCPeerConnectionFactory = {
-        RTCInitializeSSL()
-        let videoEncoderFactory = RTCDefaultVideoEncoderFactory()
-        let videoDecoderFactory = RTCDefaultVideoDecoderFactory()
-        return RTCPeerConnectionFactory(encoderFactory: videoEncoderFactory, decoderFactory: videoDecoderFactory)
-    }()
-    private var localVideoSource = factory.videoSource()
 
     private var previewLayer = AVCaptureVideoPreviewLayer()
     var videoDataOutput: AVCaptureVideoDataOutput!
@@ -32,66 +18,53 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor!
     var isRecording = false
     var wasFirstBuffer = false
-    var frameCount = 0
+    var duration = 0
+    var timer : Timer!
     var videoOutputURL: URL!
+
     
     var screenRect: CGRect! = nil
-    let recordButton = UIButton(type: .contactAdd)
+    var recordButton = UIButton(type: .contactAdd)
     let testButton = UIButton(type: .system)
     
     
     // When app minimized
     @objc func appMovedToBackground() {
-        print("App moved to background!")
         if isRecording {
             toggleRecording()
         }
     }
     
     @objc func appMovedToForeground() {
-        print("App moved to foreground!")
         restartAssetWriter()
     }
     
     
-    override func  viewDidLoad() {
+    override func  viewDidLoad() { 
         NotificationCenter.default.addObserver(self, selector: #selector(self.appMovedToBackground), name: UIApplication.willResignActiveNotification, object: nil)
         
         // App enter foregrond
         NotificationCenter.default.addObserver(self, selector: #selector(self.appMovedToForeground), name: UIApplication.didBecomeActiveNotification, object: nil)
         
-        
-        
         checkPermission()
         // Record Button
-        recordButton.setTitle("Record", for: .normal)
+        UIBrain.setRecordButtonProperties(recordButton, view)
         recordButton.addTarget(self, action: #selector(toggleRecording), for: .touchUpInside)
-        recordButton.translatesAutoresizingMaskIntoConstraints = false
-        recordButton.layer.zPosition = 1000
-        view.addSubview(recordButton)
-        NSLayoutConstraint.activate([
-            recordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            recordButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
-        ])
         
-        testButton.setTitle("Test Button", for: .normal)
-        testButton.addTarget(self, action: #selector(totalTimeOfBuffers), for: .touchUpInside)
-        testButton.translatesAutoresizingMaskIntoConstraints = false
-        testButton.layer.zPosition = 1000
-        view.addSubview(testButton)
-        NSLayoutConstraint.activate([
-            testButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            testButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -50)
-        ])
+        UIBrain.setTestButtonProperties(testButton, view)
+        //testButton.addTarget(self, action: #selector(totalTimeOfBuffers), for: .touchUpInside)
         
 
         sessionQueue.async { [unowned self] in
             guard permissionGranted else {return}
             self.setupCaptureSession()
             self.setupAssetWriter()
-            self.setupWebRTC()
             self.captureSession.startRunning()
         }
+    }
+    
+    override var shouldAutorotate: Bool {
+        return true
     }
 
     override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -131,22 +104,7 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             permissionGranted = false
         }
     }
-    
-    func setupWebRTC() {
-        let streamId = "stream"
         
-        let videoTrack = self.createVideoTrack()
-        self.localVideoTrack = videoTrack
-        self.peerConnection!.add(videoTrack, streamIds: [streamId])
-        self.remoteVideoTrack = self.peerConnection!.transceivers.first { $0.mediaType == .video }?.receiver.track as? RTCVideoTrack
-        
-    }
-    
-    func createVideoTrack() -> RTCVideoTrack {
-        let videoTrack = ViewController.factory.videoTrack(with: self.localVideoSource, trackId: "video0")
-        return videoTrack
-    }
-    
     func requestPermission() {
         sessionQueue.suspend()
           AVCaptureDevice.requestAccess(for: .video) { [unowned self] granted in
@@ -159,8 +117,13 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
     @objc func toggleRecording() {
         isRecording.toggle()
         if isRecording {
+            // Create timer
+            let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+                self.duration += 1
+            }
             recordButton.setTitle("Stop", for: .normal)
         } else {
+            // Demolish timer
             recordButton.setTitle("Record", for: .normal)
             finishAssetWriter()
         }
@@ -208,40 +171,31 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
         
     }
     
-    @objc func totalTimeOfBuffers() -> Int   {
-        // Frame count is the total number of buffers and fps is 29 so calculate video duration
-        // convert to nearest int
-        let duration = Double(frameCount) / 29
-        print(round(duration))
-        return Int(round(duration))
-    }
-    
     func finishAssetWriter() {
-        // Finish writing session
-        assetWriterInput.markAsFinished()
-        assetWriter.finishWriting {
-            print("Total number of frames: \(self.frameCount)")
-            
-            // Main queue
-            DispatchQueue.main.async {
-                UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
+        do {
+            // Finish writing session
+            assetWriterInput.markAsFinished()
+            assetWriter.finishWriting {
+                print("Total duration of video: \(self.duration)")
+                
+                // Main queue
+                DispatchQueue.main.async {
+                    UISaveVideoAtPathToSavedPhotosAlbum(self.assetWriter.outputURL.path, nil, nil, nil)
+                }
+                print("Saved to library video name: \(self.assetWriter.outputURL.path)")
+                self.restartAssetWriter()
             }
-            
-            print("Saved to library video name: \(self.assetWriter.outputURL.path)")
-            
-            self.restartAssetWriter()
+        } catch let error {
+            print(error)
         }
-        
     }
-    
     func restartAssetWriter() {
         // Restart writing session
-        setupAssetWriter()
-        wasFirstBuffer = false
-        frameCount = 0
+        self.setupAssetWriter()
+        self.wasFirstBuffer = false
+        self.timer.invalidate()
+        self.duration = 0
     }
-    
-
     func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         
         // Adding the buffers to assetWriter session for creating video.
@@ -326,14 +280,9 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             context.render(textCiImageWithBackground2, to: pixelBuffer)
             
 
-     
-
-      
-            let duration = totalTimeOfBuffers()
-
             // Convert this MM:SS format
-            let minutes = duration / 60
-            let seconds = duration % 60
+            let minutes = self.duration / 60
+            let seconds = self.duration % 60
             let time = String(format: "%02d:%02d", minutes, seconds)
 
 
@@ -362,13 +311,6 @@ class ViewController : UIViewController,AVCaptureVideoDataOutputSampleBufferDele
             
             // Add buffer to assetWriter' session
             pixelBufferAdaptor.append(CMSampleBufferGetImageBuffer(sampleBuffer!)!, withPresentationTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer!))
-            
-            let rtcPixelBuffer = RTCCVPixelBuffer(pixelBuffer: CMSampleBufferGetImageBuffer(sampleBuffer!)!)
-            let timeStampNs: Int64 = Int64(CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer!)) * 1000000000)
-            let rtcVideoFrame = RTCVideoFrame(buffer: rtcPixelBuffer, rotation: ._90, timeStampNs: timeStampNs)
-            
-            self.localVideoSource.capturer(videoCapturer!, didCapture: rtcVideoFrame)
-            frameCount += 1
         }
         else {
             // Not recoring state
