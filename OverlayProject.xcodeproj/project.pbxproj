@@ -7,25 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E213DB602A657B0D005F5D6F /* AssetWriterUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = E213DB5F2A657B0D005F5D6F /* AssetWriterUtils.swift */; };
 		E248329B2A07C04A002F3592 /* OverlayProjectApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E248329A2A07C04A002F3592 /* OverlayProjectApp.swift */; };
 		E248329D2A07C04A002F3592 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E248329C2A07C04A002F3592 /* ContentView.swift */; };
 		E248329F2A07C04C002F3592 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E248329E2A07C04C002F3592 /* Assets.xcassets */; };
 		E24832A22A07C04C002F3592 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E24832A12A07C04C002F3592 /* Preview Assets.xcassets */; };
 		E24832B32A07F0C1002F3592 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24832B22A07F0C1002F3592 /* ViewController.swift */; };
-		E24DF4032A080F3800412E91 /* OverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E24DF4022A080F3800412E91 /* OverlayView.swift */; };
 		E2EAEE852A1E0EBE0073A5AA /* HaishinKit in Frameworks */ = {isa = PBXBuildFile; productRef = E2EAEE842A1E0EBE0073A5AA /* HaishinKit */; };
 		E2F494432A615EEF00647E26 /* UIBrain.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F494422A615EEF00647E26 /* UIBrain.swift */; };
 		E2F5714F2A39FAE30052E6A3 /* WebRTC in Frameworks */ = {isa = PBXBuildFile; productRef = E2F5714E2A39FAE30052E6A3 /* WebRTC */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E213DB5F2A657B0D005F5D6F /* AssetWriterUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetWriterUtils.swift; sourceTree = "<group>"; };
 		E24832972A07C04A002F3592 /* OverlayProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OverlayProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E248329A2A07C04A002F3592 /* OverlayProjectApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayProjectApp.swift; sourceTree = "<group>"; };
 		E248329C2A07C04A002F3592 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E248329E2A07C04C002F3592 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E24832A12A07C04C002F3592 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		E24832B22A07F0C1002F3592 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		E24DF4022A080F3800412E91 /* OverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayView.swift; sourceTree = "<group>"; };
 		E26EE7232A11156B0040A622 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E2F494422A615EEF00647E26 /* UIBrain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIBrain.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -67,7 +67,6 @@
 				E248329E2A07C04C002F3592 /* Assets.xcassets */,
 				E2F494412A615EDA00647E26 /* Controllers */,
 				E248329C2A07C04A002F3592 /* ContentView.swift */,
-				E24DF4022A080F3800412E91 /* OverlayView.swift */,
 				E24832A02A07C04C002F3592 /* Preview Content */,
 			);
 			path = OverlayProject;
@@ -86,6 +85,7 @@
 			children = (
 				E24832B22A07F0C1002F3592 /* ViewController.swift */,
 				E2F494422A615EEF00647E26 /* UIBrain.swift */,
+				E213DB5F2A657B0D005F5D6F /* AssetWriterUtils.swift */,
 			);
 			path = Controllers;
 			sourceTree = "<group>";
@@ -171,8 +171,8 @@
 				E248329D2A07C04A002F3592 /* ContentView.swift in Sources */,
 				E2F494432A615EEF00647E26 /* UIBrain.swift in Sources */,
 				E24832B32A07F0C1002F3592 /* ViewController.swift in Sources */,
+				E213DB602A657B0D005F5D6F /* AssetWriterUtils.swift in Sources */,
 				E248329B2A07C04A002F3592 /* OverlayProjectApp.swift in Sources */,
-				E24DF4032A080F3800412E91 /* OverlayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
